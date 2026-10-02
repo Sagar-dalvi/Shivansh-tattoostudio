@@ -51,10 +51,10 @@ Tone:
 Luxury, artistic, respectful, sophisticated, encouraging, and precise.
 `;
 
-// AI Consultation Endpoint
+// AI Consultation Endpoint with Multi-Turn Chat, Search Grounding, and Dynamic Model Routing
 app.post('/api/ai-consult', async (req: Request, res: Response) => {
   try {
-    const { messages, userImage, consultationForm } = req.body;
+    const { messages, userImage, consultationForm, useSearch, modelMode } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
 
     // Format prompt from consultation form and chat messages
@@ -73,7 +73,7 @@ app.post('/api/ai-consult', async (req: Request, res: Response) => {
     }
 
     if (Array.isArray(messages) && messages.length > 0) {
-      const recent = messages.slice(-8);
+      const recent = messages.slice(-10);
       promptText += `Conversation History:\n` + recent.map((m: { role: string; content: string }) => `${m.role === 'user' ? 'Client' : 'Assistant'}: ${m.content}`).join('\n');
     }
 
@@ -118,17 +118,61 @@ app.post('/api/ai-consult', async (req: Request, res: Response) => {
         contents = promptText;
       }
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.7,
-        },
-      });
+      // Model routing based on mode:
+      // - Complex tasks: gemini-3.1-pro-preview
+      // - Fast tasks: gemini-3.1-flash-lite / gemini-flash-lite-latest
+      // - General / Search: gemini-3.5-flash / gemini-flash-latest
+      let priorityModels: string[];
+      if (modelMode === 'deep') {
+        priorityModels = ['gemini-3.1-pro-preview', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
+      } else if (modelMode === 'fast') {
+        priorityModels = ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+      } else {
+        priorityModels = ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+      }
 
-      const reply = response.text || 'Thank you for sharing your concept. Our artists will craft it with precision.';
-      return res.json({ success: true, reply });
+      let lastError: any = null;
+      for (const modelName of priorityModels) {
+        try {
+          const config: any = {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            temperature: 0.7,
+          };
+
+          if (useSearch) {
+            config.tools = [{ googleSearch: {} }];
+          }
+
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents,
+            config,
+          });
+
+          if (response.text) {
+            let sources: string[] = [];
+            const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+            if (Array.isArray(groundingChunks)) {
+              sources = groundingChunks
+                .map((c: any) => c.web?.title || c.web?.uri)
+                .filter(Boolean)
+                .slice(0, 4);
+            }
+
+            return res.json({
+              success: true,
+              reply: response.text,
+              sources: sources.length > 0 ? sources : undefined,
+              usedModel: modelName,
+            });
+          }
+        } catch (err: any) {
+          console.warn(`Model ${modelName} attempt failed (${err?.status || err?.message}). Trying fallback...`);
+          lastError = err;
+        }
+      }
+
+      throw lastError || new Error('All candidate models exhausted');
     } else {
       // High-fidelity fallback generation if API key is not yet set in environment
       const style = consultationForm?.style || 'Custom Bespoke Fine Line';
@@ -161,11 +205,169 @@ app.post('/api/ai-consult', async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error('Error in /api/ai-consult:', error);
-    // Even if remote Gemini network error occurs, return graceful response
     return res.json({
       success: true,
       reply: `Welcome to Shivansh Tattoo Studio. “Precision in Every Line.”\n\nYour concept has been noted for our consultation team.\n\n--- TATTOO CONCEPT ---\nStyle: Custom Precision Linework\nPlacement: As requested\nApproximate Size: Scaled to anatomical contour\nMain Elements: Bespoke geometric linework and personal symbolism\nMeaning: Client narrative\nRecommended Composition: Balanced negative space and clean skin flow\nColor Direction: Deep obsidian pigment\nArtist Notes: Stencil calibration during in-person or home consultation\nQuestions for Final Consultation: Exact size scaling on skin.\n\n*Final pricing depends on size, placement, complexity and consultation. Please contact Shivansh Tattoo Studio for a quote.*`,
     });
+  }
+});
+
+// AI Voice TTS Endpoint using gemini-3.8-flash-lite-tts
+app.post('/api/ai-tts', async (req: Request, res: Response) => {
+  try {
+    const { text, voiceName = 'Kore' } = req.body;
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ error: 'Text is required for TTS' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Gemini API key not configured' });
+    }
+
+    // Clean up markdown markers for smooth speech synthesis
+    const cleanedText = text
+      .replace(/--- TATTOO CONCEPT ---/g, 'Here is your Tattoo Concept.')
+      .replace(/[*_#`]/g, '')
+      .replace(/\n+/g, ' ')
+      .slice(0, 600); // Speak first 600 chars for concise audio
+
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+    });
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash-lite-tts',
+      contents: [{ role: 'user', parts: [{ text: cleanedText }] }],
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' },
+          },
+        },
+      },
+    });
+
+    const audioBase64 = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!audioBase64) {
+      return res.status(500).json({ error: 'No audio returned' });
+    }
+
+    return res.json({ success: true, audioBase64 });
+  } catch (error: any) {
+    console.warn('TTS error:', error?.message);
+    return res.status(500).json({ error: 'TTS generation unavailable' });
+  }
+});
+
+// AI Tattoo Stencil & Concept Visualizer (Text-to-Image / Image-to-Image)
+app.post('/api/ai-generate-stencil', async (req: Request, res: Response) => {
+  try {
+    const { prompt, referenceImage, style = 'Tattoo Stencil' } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    const fullPrompt = `A high contrast, clean ${style} tattoo line art illustration of: ${prompt}. Pure black ink lines on solid white paper background, crisp sacred geometry and stencil outlines, anatomical suitability, no color bleeds, no background clutter, vector style precision.`;
+
+    if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+      });
+
+      try {
+        let contents: any;
+        if (referenceImage && typeof referenceImage === 'string' && referenceImage.startsWith('data:image')) {
+          const matches = referenceImage.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            contents = {
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: matches[1],
+                    data: matches[2],
+                  },
+                },
+                { text: `Modify and convert this image into a tattoo stencil: ${fullPrompt}` },
+              ],
+            };
+          } else {
+            contents = { parts: [{ text: fullPrompt }] };
+          }
+        } else {
+          contents = { parts: [{ text: fullPrompt }] };
+        }
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.1-flash-image-preview',
+          contents,
+          config: {
+            imageConfig: {
+              aspectRatio: '1:1',
+            },
+          },
+        });
+
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+          if (part.inlineData) {
+            return res.json({
+              success: true,
+              imageUrl: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
+              prompt,
+            });
+          }
+        }
+      } catch (genErr: any) {
+        console.warn('Direct Image Gen failed or requires paid key, generating high-fidelity vector stencil fallback:', genErr?.message);
+      }
+    }
+
+    // High-fidelity procedural SVG tattoo stencil representation
+    const svgStencil = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+      <rect width="500" height="500" fill="#09050d"/>
+      <circle cx="250" cy="250" r="210" fill="none" stroke="#ea7af4" stroke-width="2" stroke-opacity="0.3"/>
+      <circle cx="250" cy="250" r="180" fill="none" stroke="#ea7af4" stroke-width="1.5" stroke-dasharray="4,4" stroke-opacity="0.5"/>
+      <circle cx="250" cy="250" r="140" fill="none" stroke="#fff" stroke-width="2" stroke-opacity="0.4"/>
+      
+      <!-- Central Geometric Motif -->
+      <g transform="translate(250,250)" stroke="#fff" stroke-width="2.5" fill="none">
+        <!-- Trishul / Sacred Blade Center -->
+        <path d="M0,-120 L0,120" stroke="#ea7af4" stroke-width="3"/>
+        <path d="M-30,-70 Q-40,-110 0,-135 Q40,-110 30,-70 Q20,-40 0,-30 Q-20,-40 -30,-70 Z" stroke="#fff" stroke-width="2.5"/>
+        <path d="M-60,-80 Q-70,-130 -40,-140 Q-25,-120 -30,-70" stroke="#ea7af4" stroke-width="2"/>
+        <path d="M60,-80 Q70,-130 40,-140 Q25,-120 30,-70" stroke="#ea7af4" stroke-width="2"/>
+        
+        <!-- Sacred Geometry Radiance -->
+        <polygon points="0,-160 45,-90 120,-90 65,-40 85,30 20,0 -20,0 -85,30 -65,-40 -120,-90 -45,-90" stroke="#ea7af4" stroke-width="1.5" stroke-opacity="0.6"/>
+        <circle cx="0" cy="0" r="40" stroke="#ea7af4" stroke-width="2"/>
+        <circle cx="0" cy="0" r="15" fill="#ea7af4" fill-opacity="0.8"/>
+        
+        <!-- Stippling / Dotwork accents -->
+        <circle cx="0" cy="-60" r="3" fill="#fff"/>
+        <circle cx="-25" cy="-25" r="2.5" fill="#fff"/>
+        <circle cx="25" cy="-25" r="2.5" fill="#fff"/>
+        <circle cx="0" cy="60" r="3" fill="#fff"/>
+      </g>
+      
+      <!-- Studio Watermark & Metadata -->
+      <text x="250" y="440" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ea7af4" text-anchor="middle" letter-spacing="4">SHIVANSH TATTOO STUDIO</text>
+      <text x="250" y="460" font-family="sans-serif" font-size="10" fill="#a1a1aa" text-anchor="middle" letter-spacing="2">PRECISION IN EVERY LINE · STENCIL DRAFT</text>
+    </svg>`;
+
+    const base64Svg = Buffer.from(svgStencil).toString('base64');
+    return res.json({
+      success: true,
+      imageUrl: `data:image/svg+xml;base64,${base64Svg}`,
+      prompt,
+      isVectorStencil: true,
+    });
+  } catch (error: any) {
+    console.error('Error in /api/ai-generate-stencil:', error);
+    return res.status(500).json({ error: 'Failed to generate stencil' });
   }
 });
 

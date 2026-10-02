@@ -10,6 +10,7 @@ import { ThreeDGallerySection } from './components/ThreeDGallerySection';
 import { ArtistsSection } from './components/ArtistsSection';
 import { AiAssistantSection } from './components/AiAssistantSection';
 import { AiTattooAssistantModal } from './components/AiTattooAssistantModal';
+import { UserDashboardModal } from './components/UserDashboardModal';
 import { TattooPriceEstimator, EstimateDetails } from './components/TattooPriceEstimator';
 import { BookingSection } from './components/BookingSection';
 import { HomeTattooServiceSection } from './components/HomeTattooServiceSection';
@@ -28,6 +29,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [aiAssistantOpen, setAiAssistantOpen] = useState<boolean>(false);
   const [aiInitialPrompt, setAiInitialPrompt] = useState<string | undefined>(undefined);
+  const [userDashboardOpen, setUserDashboardOpen] = useState<boolean>(false);
 
   // Prefilled states for the booking section
   const [bookingPrefilledType, setBookingPrefilledType] = useState<string | undefined>(undefined);
@@ -114,6 +116,7 @@ export default function App() {
       <Navbar
         onOpenAiAssistant={() => handleOpenAiAssistant()}
         onOpenBooking={() => handleOpenBooking()}
+        onOpenUserDashboard={() => setUserDashboardOpen(true)}
       />
 
       <main>
@@ -175,6 +178,7 @@ export default function App() {
           prefilledSize={bookingPrefilledSize}
           prefilledServiceMode={bookingPrefilledServiceMode}
           prefilledQuoteSummary={bookingPrefilledQuoteSummary}
+          onOpenUserDashboard={() => setUserDashboardOpen(true)}
         />
 
         {/* 12. Home Tattoo Service ("GET INKED AT YOUR PLACE") */}
@@ -215,7 +219,14 @@ export default function App() {
         initialPrompt={aiInitialPrompt}
       />
 
-      {/* 19. Premium Footer */}
+      {/* 19. Client Profile & Bookings Dashboard Modal */}
+      <UserDashboardModal
+        isOpen={userDashboardOpen}
+        onClose={() => setUserDashboardOpen(false)}
+        onOpenBookingWithConcept={handleTransferConceptToBooking}
+      />
+
+      {/* 20. Premium Footer */}
       <Footer
         onOpenAiAssistant={() => handleOpenAiAssistant()}
         onOpenBooking={() => handleOpenBooking()}

@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Sparkles, Calendar, MessageSquare } from 'lucide-react';
+import { Menu, X, Sparkles, Calendar, User as UserIcon, LogIn, LogOut, ChevronDown, FolderHeart } from 'lucide-react';
 import { STUDIO_CONFIG } from '../studioConfig';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   onOpenAiAssistant: () => void;
   onOpenBooking: () => void;
+  onOpenUserDashboard?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenAiAssistant, onOpenBooking }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  onOpenAiAssistant,
+  onOpenBooking,
+  onOpenUserDashboard,
+}) => {
+  const { user, signIn, signOut } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -106,8 +114,88 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAiAssistant, onOpenBooking
           </button>
         </nav>
 
-        {/* Right CTA */}
+        {/* Right CTA & User Account */}
         <div className="hidden sm:flex items-center gap-3">
+          {user ? (
+            <div className="relative">
+              <button
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="flex items-center gap-2 p-1.5 rounded-full bg-white/5 border border-[#ea7af4]/30 hover:border-[#ea7af4] transition-colors"
+                title="Account Menu"
+              >
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || 'User'}
+                    className="w-7 h-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-[#ea7af4]/20 flex items-center justify-center text-[#ea7af4]">
+                    <UserIcon className="w-4 h-4" />
+                  </div>
+                )}
+                <ChevronDown className="w-3.5 h-3.5 text-zinc-400 mr-1" />
+              </button>
+
+              {userDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-[#11091a] border border-[#ea7af4]/30 rounded-xl shadow-2xl p-2 z-50">
+                  <div className="px-3 py-2 border-b border-white/10 mb-1">
+                    <p className="text-xs font-bold text-white truncate">{user.displayName || 'Client'}</p>
+                    <p className="text-[10px] text-zinc-400 truncate">{user.email}</p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      if (onOpenUserDashboard) onOpenUserDashboard();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-white/10 rounded flex items-center gap-2 transition-colors"
+                  >
+                    <FolderHeart className="w-3.5 h-3.5 text-[#ea7af4]" />
+                    <span>My Bookings & Concepts</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      signOut();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 rounded flex items-center gap-2 transition-colors mt-1"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => signIn()}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-zinc-300 hover:text-white rounded border border-white/15 hover:border-[#ea7af4]/40 bg-white/5 hover:bg-white/10 transition-colors"
+              title="Sign in with Google"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 10.02 0 12s.45 3.83 1.25 5.42l4.03-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+              <span>Sign In</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenBooking}
             className="relative inline-flex items-center justify-center px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white transition-all duration-300 rounded bg-gradient-to-r from-[#ea7af4] via-[#d946ef] to-[#c084fc] hover:from-[#f08dfa] hover:to-[#d8b4fe] shadow-[0_0_20px_rgba(234,122,244,0.45)] hover:shadow-[0_0_28px_rgba(234,122,244,0.7)] active:scale-95"
@@ -119,6 +207,29 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAiAssistant, onOpenBooking
 
         {/* Mobile menu trigger */}
         <div className="flex items-center gap-2 lg:hidden">
+          {user ? (
+            <button
+              onClick={onOpenUserDashboard}
+              className="w-7 h-7 rounded-full border border-[#ea7af4]/40 overflow-hidden"
+              title="My Dashboard"
+            >
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-[#ea7af4]/20 flex items-center justify-center text-[#ea7af4]">
+                  <UserIcon className="w-3.5 h-3.5" />
+                </div>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={() => signIn()}
+              className="text-[11px] font-semibold text-zinc-300 px-2 py-1 rounded bg-white/5 border border-white/10"
+            >
+              Sign In
+            </button>
+          )}
+
           <button
             onClick={onOpenBooking}
             className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white bg-gradient-to-r from-[#ea7af4] to-[#c084fc] rounded shadow-[0_0_12px_rgba(234,122,244,0.4)]"
@@ -139,6 +250,29 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAiAssistant, onOpenBooking
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-x-0 top-[60px] bg-[#0c0714]/95 backdrop-blur-xl border-b border-[#ea7af4]/20 px-6 py-6 transition-all shadow-2xl">
           <div className="flex flex-col space-y-4">
+            {user && (
+              <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {user.photoURL && (
+                    <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full" />
+                  )}
+                  <div>
+                    <p className="text-xs font-bold text-white">{user.displayName}</p>
+                    <p className="text-[10px] text-zinc-400">{user.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (onOpenUserDashboard) onOpenUserDashboard();
+                  }}
+                  className="text-[11px] font-bold text-[#ea7af4] px-2.5 py-1 rounded bg-[#ea7af4]/10 border border-[#ea7af4]/30"
+                >
+                  Dashboard
+                </button>
+              </div>
+            )}
+
             {navLinks.map((link) => (
               <a
                 key={link.label}

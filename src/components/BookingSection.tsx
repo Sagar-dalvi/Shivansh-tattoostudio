@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Upload, CheckCircle2, AlertCircle, Sparkles, Send, Shield } from 'lucide-react';
+import { Calendar, Clock, Upload, CheckCircle2, AlertCircle, Sparkles, Send, Shield, FolderHeart } from 'lucide-react';
 import { STUDIO_CONFIG, TATTOO_SERVICES } from '../studioConfig';
+import { useAuth } from '../context/AuthContext';
+import { createAppointment } from '../services/firestoreService';
 
 interface BookingSectionProps {
   prefilledType?: string;
@@ -9,6 +11,7 @@ interface BookingSectionProps {
   prefilledSize?: string;
   prefilledServiceMode?: string;
   prefilledQuoteSummary?: string;
+  onOpenUserDashboard?: () => void;
 }
 
 export const BookingSection: React.FC<BookingSectionProps> = ({
@@ -18,7 +21,9 @@ export const BookingSection: React.FC<BookingSectionProps> = ({
   prefilledSize,
   prefilledServiceMode,
   prefilledQuoteSummary,
+  onOpenUserDashboard,
 }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -38,7 +43,18 @@ export const BookingSection: React.FC<BookingSectionProps> = ({
   const [imageFileName, setImageFileName] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [savedAppointmentId, setSavedAppointmentId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        fullName: prev.fullName || user.displayName || '',
+        email: prev.email || user.email || '',
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (prefilledType) {
@@ -76,15 +92,34 @@ export const BookingSection: React.FC<BookingSectionProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate reliable dispatch
-    setTimeout(() => {
+    try {
+      if (user) {
+        const aptId = await createAppointment({
+          userId: user.uid,
+          clientName: formData.fullName,
+          phone: formData.phone,
+          email: formData.email || user.email || '',
+          serviceName: formData.tattooType,
+          artist: 'Senior Resident Artist',
+          preferredDate: formData.preferredDate || 'Flexible',
+          preferredTime: formData.preferredTime,
+          placement: formData.preferredPlacement || 'Consultation Placement',
+          size: formData.approximateSize || 'Medium',
+          isHomeService: formData.serviceMode === 'Home Tattoo Service',
+          notes: formData.tattooDescription,
+        });
+        setSavedAppointmentId(aptId);
+      }
+    } catch (err) {
+      console.warn('Could not persist appointment to Firestore:', err);
+    } finally {
       setIsSubmitting(false);
       setIsSubmitted(true);
-    }, 800);
+    }
   };
 
   return (
@@ -130,9 +165,24 @@ export const BookingSection: React.FC<BookingSectionProps> = ({
               <div><strong className="text-white">Type:</strong> {formData.tattooType}</div>
               <div><strong className="text-white">Service Mode:</strong> {formData.serviceMode}</div>
               <div><strong className="text-white">Preferred Date:</strong> {formData.preferredDate || 'Flexible'}</div>
+              {savedAppointmentId && (
+                <div className="text-emerald-400 font-semibold pt-1 border-t border-white/10 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Synced to your verified client profile</span>
+                </div>
+              )}
             </div>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+              {onOpenUserDashboard && user && (
+                <button
+                  onClick={onOpenUserDashboard}
+                  className="px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-[#ea7af4] hover:bg-[#d946ef] rounded flex items-center gap-2 transition-colors"
+                >
+                  <FolderHeart className="w-4 h-4" />
+                  View In My Dashboard
+                </button>
+              )}
               <button
                 onClick={() => setIsSubmitted(false)}
                 className="px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white border border-white/20 rounded transition-colors"

@@ -1,0 +1,72 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false; // Disallow querying all users
+      allow create: if isOwner(userId)
+                    && isValidId(userId)
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.email is string
+                    && request.resource.data.email.size() <= 254;
+      allow update: if isOwner(userId)
+                    && isValidId(userId)
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'phone', 'updatedAt']);
+      allow delete: if false;
+
+      // Subcollection: Saved Concepts
+      match /savedConcepts/{conceptId} {
+        allow read: if isOwner(userId) && isValidId(conceptId);
+        allow create: if isOwner(userId)
+                      && isValidId(conceptId)
+                      && request.resource.data.userId == request.auth.uid
+                      && request.resource.data.title is string
+                      && request.resource.data.title.size() <= 200
+                      && request.resource.data.conceptText is string
+                      && request.resource.data.conceptText.size() <= 10000;
+        allow update: if isOwner(userId)
+                      && isValidId(conceptId)
+                      && request.resource.data.userId == resource.data.userId
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'conceptText', 'style', 'placement', 'imageUrl']);
+        allow delete: if isOwner(userId) && isValidId(conceptId);
+      }
+    }
+
+    // --- Appointments Collection ---
+    match /appointments/{appointmentId} {
+      allow get: if isSignedIn() && isValidId(appointmentId) && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn();
+      allow create: if isSignedIn()
+                    && isValidId(appointmentId)
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.clientName is string
+                    && request.resource.data.clientName.size() <= 120
+                    && request.resource.data.phone is string
+                    && request.resource.data.phone.size() <= 30
+                    && request.resource.data.serviceName is string
+                    && request.resource.data.serviceName.size() <= 150;
+      allow update: if isSignedIn()
+                    && isValidId(appointmentId)
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == resource.data.userId
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['preferredDate', 'preferredTime', 'placement', 'size', 'notes', 'status']);
+      allow delete: if isSignedIn() && isValidId(appointmentId) && resource.data.userId == request.auth.uid;
+    }
+  }
+}
