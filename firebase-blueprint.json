@@ -10,6 +10,7 @@
         "email": { "type": "string", "description": "User email address" },
         "photoURL": { "type": "string", "description": "Profile picture URL" },
         "phone": { "type": "string", "description": "Optional phone number" },
+        "role": { "type": "string", "description": "Role: client or admin" },
         "createdAt": { "type": "string", "description": "ISO timestamp of account creation" },
         "updatedAt": { "type": "string", "description": "ISO timestamp of last update" }
       },
@@ -53,6 +54,87 @@
         "createdAt": { "type": "string", "description": "ISO timestamp" }
       },
       "required": ["id", "userId", "title", "conceptText", "createdAt"]
+    },
+    "Review": {
+      "title": "Customer Review",
+      "description": "Verified client tattoo review and rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Review unique identifier" },
+        "userId": { "type": "string", "description": "UID of reviewer if authenticated" },
+        "author": { "type": "string", "description": "Client display name" },
+        "rating": { "type": "number", "description": "Star rating out of 5" },
+        "service": { "type": "string", "description": "Tattoo style received" },
+        "review": { "type": "string", "description": "Review comment" },
+        "date": { "type": "string", "description": "Date or relative time string" },
+        "verified": { "type": "boolean", "description": "Verified client badge" },
+        "createdAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["id", "author", "rating", "review", "createdAt"]
+    },
+    "Service": {
+      "title": "Tattoo Service",
+      "description": "Studio tattoo discipline and offering",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Service slug ID" },
+        "title": { "type": "string", "description": "Service name" },
+        "subtitle": { "type": "string", "description": "Short descriptive tagline" },
+        "description": { "type": "string", "description": "Detailed explanation of discipline" },
+        "startingPrice": { "type": "string", "description": "Starting price label" },
+        "imageUrl": { "type": "string", "description": "Cover photograph URL" },
+        "tags": { "type": "string", "description": "Keywords or category tags" },
+        "order": { "type": "number", "description": "Display order index" }
+      },
+      "required": ["id", "title", "description"]
+    },
+    "Artist": {
+      "title": "Tattoo Artist",
+      "description": "Studio resident artist profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Artist slug identifier" },
+        "name": { "type": "string", "description": "Artist full name" },
+        "role": { "type": "string", "description": "Role: Founder, Senior Resident, etc." },
+        "experience": { "type": "string", "description": "Years of experience" },
+        "specialties": { "type": "string", "description": "Core specialties" },
+        "bio": { "type": "string", "description": "Biography and artistic background" },
+        "instagram": { "type": "string", "description": "Instagram handle" },
+        "photoUrl": { "type": "string", "description": "Portrait photograph URL" },
+        "order": { "type": "number", "description": "Display order" }
+      },
+      "required": ["id", "name", "role", "specialties"]
+    },
+    "GalleryItem": {
+      "title": "Gallery Portfolio Piece",
+      "description": "Tattoo portfolio photo",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Photo unique identifier" },
+        "title": { "type": "string", "description": "Piece title or motif description" },
+        "style": { "type": "string", "description": "Tattoo style category" },
+        "placement": { "type": "string", "description": "Body placement" },
+        "imageUrl": { "type": "string", "description": "High resolution image URL" },
+        "featured": { "type": "boolean", "description": "Whether featured in hero or 3D view" }
+      },
+      "required": ["id", "title", "style", "imageUrl"]
+    },
+    "BlogPost": {
+      "title": "Studio Journal Post",
+      "description": "Tattoo care guide or artistic journal article",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Article slug identifier" },
+        "title": { "type": "string", "description": "Post headline" },
+        "slug": { "type": "string", "description": "URL slug" },
+        "category": { "type": "string", "description": "Article category" },
+        "excerpt": { "type": "string", "description": "Summary blurb" },
+        "readTime": { "type": "string", "description": "Estimated read duration" },
+        "date": { "type": "string", "description": "Publish date label" },
+        "imageUrl": { "type": "string", "description": "Cover image URL" },
+        "content": { "type": "string", "description": "Full markdown or text body" }
+      },
+      "required": ["id", "title", "category", "excerpt", "readTime"]
     }
   },
   "firestore": {
@@ -67,6 +149,26 @@
     "/users/{userId}/savedConcepts/{conceptId}": {
       "schema": { "$ref": "#/entities/SavedConcept" },
       "description": "Subcollection of saved tattoo design concepts owned by the user"
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Customer reviews readable by everyone, creatable by authenticated or verified clients"
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/Service" },
+      "description": "Studio tattoo services readable publicly by all visitors"
+    },
+    "/artists/{artistId}": {
+      "schema": { "$ref": "#/entities/Artist" },
+      "description": "Studio artist profiles readable publicly by all visitors"
+    },
+    "/gallery/{galleryId}": {
+      "schema": { "$ref": "#/entities/GalleryItem" },
+      "description": "Studio tattoo portfolio items readable publicly by all visitors"
+    },
+    "/blog/{blogId}": {
+      "schema": { "$ref": "#/entities/BlogPost" },
+      "description": "Studio journal articles and care guides readable publicly by all visitors"
     }
   }
 }

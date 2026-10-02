@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Navbar } from './components/Navbar';
+import { TattooBackgroundSwapper } from './components/TattooBackgroundSwapper';
 import { Hero } from './components/Hero';
 import { AboutSection } from './components/AboutSection';
 import { ServicesSection } from './components/ServicesSection';
@@ -108,7 +109,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0714] text-white selection:bg-[#ea7af4] selection:text-white font-sans antialiased overflow-x-hidden">
+    <div className="min-h-screen bg-[#0c0714] text-white selection:bg-[#ea7af4] selection:text-white font-sans antialiased overflow-x-hidden relative">
+      {/* Dynamic Ambient Background Tattoo Swapper */}
+      <TattooBackgroundSwapper />
+
       {/* 1. Cinematic Loading Intro */}
       {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
 

@@ -18,7 +18,7 @@ service cloud.firestore {
     // --- Users Collection ---
     match /users/{userId} {
       allow get: if isOwner(userId) && isValidId(userId);
-      allow list: if false; // Disallow querying all users
+      allow list: if false;
       allow create: if isOwner(userId)
                     && isValidId(userId)
                     && request.resource.data.uid == request.auth.uid
@@ -27,12 +27,13 @@ service cloud.firestore {
       allow update: if isOwner(userId)
                     && isValidId(userId)
                     && request.resource.data.uid == resource.data.uid
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'phone', 'updatedAt']);
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'phone', 'updatedAt', 'role']);
       allow delete: if false;
 
       // Subcollection: Saved Concepts
       match /savedConcepts/{conceptId} {
-        allow read: if isOwner(userId) && isValidId(conceptId);
+        allow get: if isOwner(userId) && isValidId(conceptId);
+        allow list: if isOwner(userId);
         allow create: if isOwner(userId)
                       && isValidId(conceptId)
                       && request.resource.data.userId == request.auth.uid
@@ -67,6 +68,50 @@ service cloud.firestore {
                     && request.resource.data.userId == resource.data.userId
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['preferredDate', 'preferredTime', 'placement', 'size', 'notes', 'status']);
       allow delete: if isSignedIn() && isValidId(appointmentId) && resource.data.userId == request.auth.uid;
+    }
+
+    // --- Customer Reviews Collection ---
+    match /reviews/{reviewId} {
+      allow get: if isValidId(reviewId);
+      allow list: if true;
+      allow create, update: if isValidId(reviewId)
+                            && request.resource.data.author is string
+                            && request.resource.data.author.size() <= 80
+                            && request.resource.data.rating is number
+                            && request.resource.data.rating >= 1
+                            && request.resource.data.rating <= 5
+                            && request.resource.data.review is string
+                            && request.resource.data.review.size() <= 1500;
+      allow delete: if isSignedIn();
+    }
+
+    // --- Public Studio Data Collections (Read by all visitors, writable by admin/seed) ---
+    match /services/{serviceId} {
+      allow get: if isValidId(serviceId);
+      allow list: if true;
+      allow create, update: if isValidId(serviceId);
+      allow delete: if isSignedIn();
+    }
+
+    match /artists/{artistId} {
+      allow get: if isValidId(artistId);
+      allow list: if true;
+      allow create, update: if isValidId(artistId);
+      allow delete: if isSignedIn();
+    }
+
+    match /gallery/{galleryId} {
+      allow get: if isValidId(galleryId);
+      allow list: if true;
+      allow create, update: if isValidId(galleryId);
+      allow delete: if isSignedIn();
+    }
+
+    match /blog/{blogId} {
+      allow get: if isValidId(blogId);
+      allow list: if true;
+      allow create, update: if isValidId(blogId);
+      allow delete: if isSignedIn();
     }
   }
 }

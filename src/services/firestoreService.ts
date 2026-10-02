@@ -7,7 +7,7 @@ import {
   where,
   deleteDoc,
   orderBy,
-  serverTimestamp,
+  addDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -40,6 +40,41 @@ export interface SavedConceptRecord {
   createdAt: string;
 }
 
+export interface ReviewRecord {
+  id: string;
+  author: string;
+  rating: number;
+  service?: string;
+  review: string;
+  date?: string;
+  verified?: boolean;
+  createdAt: string;
+  userId?: string;
+}
+
+export interface ServiceRecord {
+  id: string;
+  title: string;
+  subtitle?: string;
+  description: string;
+  startingPrice?: string;
+  imageUrl?: string;
+  tags?: string;
+  order?: number;
+}
+
+export interface ArtistRecord {
+  id: string;
+  name: string;
+  role: string;
+  experience: string;
+  specialties: string;
+  bio: string;
+  instagram?: string;
+  photoUrl?: string;
+  order?: number;
+}
+
 // Save a new appointment
 export async function createAppointment(appointment: Omit<AppointmentRecord, 'id' | 'createdAt' | 'status'> & { id?: string }): Promise<string> {
   const id = appointment.id || `apt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
@@ -64,7 +99,6 @@ export async function getUserAppointments(userId: string): Promise<AppointmentRe
     querySnapshot.forEach((docSnap) => {
       appointments.push(docSnap.data() as AppointmentRecord);
     });
-    // sort newest first
     return appointments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   } catch (error) {
     console.error('Error fetching appointments:', error);
@@ -107,4 +141,64 @@ export async function getUserSavedConcepts(userId: string): Promise<SavedConcept
 export async function deleteSavedConcept(userId: string, conceptId: string): Promise<void> {
   const conceptRef = doc(db, 'users', userId, 'savedConcepts', conceptId);
   await deleteDoc(conceptRef);
+}
+
+// Fetch public customer reviews
+export async function getFirestoreReviews(): Promise<ReviewRecord[]> {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'reviews'));
+    const reviews: ReviewRecord[] = [];
+    querySnapshot.forEach((docSnap) => {
+      reviews.push(docSnap.data() as ReviewRecord);
+    });
+    return reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  } catch (error) {
+    console.warn('Could not fetch reviews from Firestore, using defaults:', error);
+    return [];
+  }
+}
+
+// Submit a new customer review to Firestore
+export async function createCustomerReview(review: Omit<ReviewRecord, 'id' | 'createdAt'>): Promise<string> {
+  const id = `rev-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const reviewRef = doc(db, 'reviews', id);
+  const data: ReviewRecord = {
+    ...review,
+    id,
+    verified: true,
+    createdAt: new Date().toISOString(),
+  };
+
+  await setDoc(reviewRef, data);
+  return id;
+}
+
+// Fetch public studio services
+export async function getFirestoreServices(): Promise<ServiceRecord[]> {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'services'));
+    const services: ServiceRecord[] = [];
+    querySnapshot.forEach((docSnap) => {
+      services.push(docSnap.data() as ServiceRecord);
+    });
+    return services.sort((a, b) => (a.order || 0) - (b.order || 0));
+  } catch (error) {
+    console.warn('Could not fetch services from Firestore:', error);
+    return [];
+  }
+}
+
+// Fetch public studio artists
+export async function getFirestoreArtists(): Promise<ArtistRecord[]> {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'artists'));
+    const artists: ArtistRecord[] = [];
+    querySnapshot.forEach((docSnap) => {
+      artists.push(docSnap.data() as ArtistRecord);
+    });
+    return artists.sort((a, b) => (a.order || 0) - (b.order || 0));
+  } catch (error) {
+    console.warn('Could not fetch artists from Firestore:', error);
+    return [];
+  }
 }
