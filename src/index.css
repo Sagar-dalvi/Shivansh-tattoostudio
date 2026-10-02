@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-lilac: #ea7af4;
+    --brand-pink: #f59cff;
+    --brand-lavender: #fae8ff;
+    --brand-purple: #c084fc;
+    --brand-graphite: #3f3e43;
+    --neon-pink: #ea7af4;
+    --neon-purple: #c084fc;
+    --neon-glow: rgba(234, 122, 244, 0.45);
+    --dark-bg: #0c0714;
+    --card-bg: #130a1c;
+  }
+
+  body {
+    background-color: #0c0714;
+    color: #fdf4ff;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  }
+
+  .font-brand, .font-serif-brand {
+    font-family: 'Cinzel', 'Times New Roman', serif;
+  }
+}
+
+/* Custom Lilac & Orchid Glows matching official logo */
+.neon-glow-pink {
+  box-shadow: 0 0 20px -2px rgba(234, 122, 244, 0.45), 0 0 40px -6px rgba(192, 132, 252, 0.3);
+}
+
+.neon-glow-subtle {
+  box-shadow: 0 0 16px -3px rgba(234, 122, 244, 0.3);
+}
+
+.neon-text-glow {
+  text-shadow: 0 0 14px rgba(234, 122, 244, 0.65), 0 0 28px rgba(245, 156, 255, 0.4);
+}
+
+.neon-border-glow {
+  border-color: rgba(234, 122, 244, 0.55);
+  box-shadow: 0 0 16px -2px rgba(234, 122, 244, 0.35);
+}
+
+.glass-panel {
+  background: rgba(19, 10, 28, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 156, 255, 0.12);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(28, 16, 42, 0.88);
+  border-color: rgba(234, 122, 244, 0.45);
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.8), 0 0 22px -4px rgba(234, 122, 244, 0.28);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0c0714;
+}
+::-webkit-scrollbar-thumb {
+  background: #2b1a3c;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ea7af4;
+}

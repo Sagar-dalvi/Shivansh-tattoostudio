@@ -1,0 +1,7 @@
+{
+  "name": "Shivansh Tattoo Studio",
+  "description": "Luxury tattoo studio specializing in custom designs, realism, fine line, spiritual and portrait tattoos with precision in every line.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

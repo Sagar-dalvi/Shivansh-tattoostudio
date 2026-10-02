@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 540" width="100%" height="100%">
+  <defs>
+    <!-- Background Linear Gradient faithfully reproduced from the official logo -->
+    <linearGradient id="shivanshRealGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e986f7" />
+      <stop offset="20%" stop-color="#ee94f9" />
+      <stop offset="50%" stop-color="#f5c2fb" />
+      <stop offset="78%" stop-color="#fae2fc" />
+      <stop offset="100%" stop-color="#fef6ff" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="500" height="540" fill="url(#shivanshRealGradient)" />
+
+  <!-- The Official Shivansh Monogram Emblem (Exact Real Logo Geometry) -->
+  <g id="shivansh-real-emblem" fill="#444349">
+    <!-- 1. Top Chevron Apex -->
+    <polygon points="250,20 188,82 188,150 250,88 312,150 312,82" />
+
+    <!-- 2. Left Pillar Upper Section (with horizontal slit above crossbar) -->
+    <rect x="120" y="82" width="61" height="146" />
+
+    <!-- 3. Horizontal Crossbar & Connecting Extensions -->
+    <rect x="80" y="238" width="340" height="64" />
+
+    <!-- 4. Left Pillar Lower Section -->
+    <polygon points="120,302 181,302 181,451 120,390" />
+
+    <!-- 5. Right Pillar (Full continuous bar with 45-degree angled base) -->
+    <polygon points="319,82 380,82 380,390 319,451" />
+
+    <!-- 6. Left Arrowhead (Winged Barb on Top, Tip on Bar Line) -->
+    <polygon points="5,238 80,170 80,302" />
+
+    <!-- 7. Right Arrowhead (Winged Barb on Top, Tip on Bar Line) -->
+    <polygon points="495,238 420,170 420,302" />
+
+    <!-- 8. Bottom Chevron Apex -->
+    <polygon points="250,520 188,458 188,390 250,452 312,390 312,458" />
+  </g>
+</svg>
